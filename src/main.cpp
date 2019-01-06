@@ -283,9 +283,9 @@ int main() {
 
 			map<int, vector<vector<double>>> cars_around;
 
-			// find ref_v to use
+			// process sensor fusion situation (check for surrounding cars in every lane)
 			for (int i = 0; i < sensor_fusion.size(); ++i) {
-				// car is in my lane
+				
 				double d = sensor_fusion[i][6];
 
 				double vx = sensor_fusion[i][3];
@@ -307,21 +307,19 @@ int main() {
 					}
 
 					if (d < (2+4*ln+2) && d > (2+4*ln-2)) {
+						
 						if ((ln == lane) && (check_car_s > car_s) && (check_car_s - car_s < 30)) {
-							//ref_vel = 29.5;
+							// car is in my lane
+							// check if it's too close
 							too_close = true;
 						}
 						
 						cars_around[ln].push_back(car_data);
 					}
-				
-					
-					
 				}
-
-				
 			}
 			
+			// handle the lane changing situation
 			if (too_close) {
 				
 				switch (lane) {
@@ -463,7 +461,7 @@ int main() {
 			ptsy.push_back(next_wp2[1]);
 
 
-			// 
+			// adjust preliminaty x, y coordinates based on ref_x, ref_y and ref_yaw
 			for (int i = 0; i < ptsx.size(); ++i) {
 				auto shift_x = ptsx[i]-ref_x;
 				auto shift_y = ptsy[i]-ref_y;
@@ -517,18 +515,6 @@ int main() {
 				next_x_vals.push_back(x_point);
 				next_y_vals.push_back(y_point);
 			}
-
-          	// TODO: define a path made up of (x,y) points that the car will visit sequentially every .02 seconds
-						
-						/*double dist_inc = 0.4;
-						for(int i = 0; i < 50; i++)
-						{    
-								double next_s = car_s + (i+1)*dist_inc;
-								double next_d = 6;
-								vector<double> xy = getXY(next_s, next_d, map_waypoints_s, map_waypoints_x, map_waypoints_y);
-								next_x_vals.push_back(xy[0]);
-								next_y_vals.push_back(xy[1]);
-						}*/
 
           	msgJson["next_x"] = next_x_vals;
           	msgJson["next_y"] = next_y_vals;
