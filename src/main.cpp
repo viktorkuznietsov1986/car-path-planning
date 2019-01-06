@@ -188,6 +188,99 @@ bool can_change_lane(double car_s, vector<vector<double>>& cars_around) {
 	return is_safe;
 }
 
+int getProperLane(int current_lane, int target_lane, bool too_close, double car_s, map<int, vector<vector<double>>>& cars_around) {
+	auto lane = current_lane;
+	
+	// handle the lane changing situation
+	if (too_close) {
+				
+		switch (lane) {
+			case 0:
+			{
+				// check if it's safe to go right
+				bool is_safe = can_change_lane(car_s, cars_around[1]);
+
+				if (is_safe) {
+					lane = 1;
+				}
+				
+				// keep lane otherwise
+				
+				break;
+			}
+			case 1:
+			{
+				// check if it's safe to go left
+				bool is_safe = can_change_lane(car_s, cars_around[0]);
+
+				if (is_safe) {
+					lane = 0;
+				}
+				else {
+					is_safe = can_change_lane(car_s, cars_around[2]);
+
+					// check if it's safe to go right
+					if (is_safe) {
+						lane = 2;
+					}
+				}
+
+				
+
+				// keep lane otherwise
+				
+				break;
+			}
+			case 2:
+			{
+				// check if it's safe to go left
+				bool is_safe = can_change_lane(car_s, cars_around[1]);
+
+				if (is_safe) {
+					lane = 1;
+				}
+
+				// keep lane otherwise
+
+				break;
+			}
+		}
+
+	}
+	else {
+		if (target_lane != lane) {
+			bool is_safe = true;
+			
+			switch (lane) {
+				case 0:
+				{
+					// check if it's safe to go right
+					is_safe = can_change_lane(car_s, cars_around[1]);
+
+					// keep lane otherwise
+					
+					break;
+				}
+				case 2:
+				{
+					// check if it's safe to go left
+					is_safe = can_change_lane(car_s, cars_around[1]);
+
+					// keep lane otherwise
+
+					break;
+				}
+			}
+
+			if (is_safe) {
+				lane = 1;
+			}
+		}
+	}
+
+	return lane;
+}
+
 int main() {
   uWS::Hub h;
 
@@ -234,7 +327,10 @@ int main() {
 	// reference velocity
 	double ref_vel = 0.0;
 
-  h.onMessage([&ref_vel, &map_waypoints_x,&map_waypoints_y,&map_waypoints_s,&map_waypoints_dx,&map_waypoints_dy, &lane, &target_lane](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
+	// acceleration
+	double acceleration = .224;
+
+  h.onMessage([&ref_vel, &map_waypoints_x,&map_waypoints_y,&map_waypoints_s,&map_waypoints_dx,&map_waypoints_dy, &lane, &target_lane, &acceleration](uWS::WebSocket<uWS::SERVER> ws, char *data, size_t length,
                      uWS::OpCode opCode) {
     // "42" at the start of the message means there's a websocket message event.
     // The 4 signifies a websocket message
@@ -320,91 +416,8 @@ int main() {
 			}
 			
 			// handle the lane changing situation
-			if (too_close) {
-				
-				switch (lane) {
-					case 0:
-					{
-						// check if it's safe to go right
-						bool is_safe = can_change_lane(car_s, cars_around[1]);
-
-						if (is_safe) {
-							lane = 1;
-						}
-						
-						// keep lane otherwise
-						
-						break;
-					}
-					case 1:
-					{
-						// check if it's safe to go left
-						bool is_safe = can_change_lane(car_s, cars_around[0]);
-
-						if (is_safe) {
-							lane = 0;
-						}
-						else {
-							is_safe = can_change_lane(car_s, cars_around[2]);
-
-							// check if it's safe to go right
-							if (is_safe) {
-								lane = 2;
-							}
-						}
-
-						
-
-						// keep lane otherwise
-						
-						break;
-					}
-					case 2:
-					{
-						// check if it's safe to go left
-						bool is_safe = can_change_lane(car_s, cars_around[1]);
-
-						if (is_safe) {
-							lane = 1;
-						}
-
-						// keep lane otherwise
-
-						break;
-					}
-				}
-
-			}
-			else {
-				if (target_lane != lane) {
-					bool is_safe = true;
-					
-					switch (lane) {
-						case 0:
-						{
-							// check if it's safe to go right
-							is_safe = can_change_lane(car_s, cars_around[1]);
-
-							// keep lane otherwise
-							
-							break;
-						}
-						case 2:
-						{
-							// check if it's safe to go left
-							is_safe = can_change_lane(car_s, cars_around[1]);
-
-							// keep lane otherwise
-
-							break;
-						}
-					}
-
-					if (is_safe) {
-						lane = 1;
-					}
-				}
-			}
+			lane = getProperLane(lane, target_lane, too_close, car_s, cars_around);
+			
 			
           	json msgJson;
 
@@ -490,10 +503,10 @@ int main() {
 
 			for (int i = 1; i <= 50-previous_path_x.size(); ++i) {
 				if (too_close) {
-					ref_vel -= .224;
+					ref_vel -= acceleration;
 				}
 				else if (ref_vel < 49.5) {
-					ref_vel += .224;
+					ref_vel += acceleration;
 				}
 
 				double N = (target_dist/(.02*ref_vel/2.24));
